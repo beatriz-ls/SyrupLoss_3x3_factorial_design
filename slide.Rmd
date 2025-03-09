@@ -1,0 +1,253 @@
+---
+title: "Analise de desperdicio de Xarope"
+subtitle: "Planejamento de experimentos: Fatorial 3³"
+author: ["Beatriz Lima", "Lohã Barbosa"]
+date: "10/03/2025"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+## O que veremos?
+
+ - Introdução ao problema
+ - Pacotes usados no R
+ - Dados
+ - Descritiva
+ - Modelo linear (Anova)
+ - Pressupostos do modelo
+ - Conclusão
+ - Problemas enfrentados
+
+---
+## Introdução ao problema
+
+O presente estudo tem como objetivo analisar a influência de diferentes tipos de **bicos de pulverização (NozzleType)**, **velocidades de aplicação (Speed)** e **pressões operacionais (Pressure)** na **perda de xarope (SyrupLoss)**. Para isso, foi realizado um experimento fatorial, onde todas as combinações desses fatores foram testadas e avaliadas. A compreensão do impacto dessas variáveis é fundamental para otimizar o processo de pulverização, reduzindo desperdícios e melhorando a eficiência operacional.
+
+A análise de variância (ANOVA) foi utilizada para verificar se os fatores individuais e suas interações influenciam significativamente a variável resposta. A inclusão de interações permite investigar se o efeito de um fator depende dos níveis dos outros fatores, proporcionando uma visão mais abrangente do fenômeno estudado.
+
+---
+## Pacotes
+
+```{r libs, warning=FALSE,message=FALSE}
+
+library(MontgomeryDAE) # pacotes com df do livro do montgomery
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(car)
+library(DT)
+library(lmtest)
+library(broom)
+```
+
+---
+## Dados
+
+```{r data, warning=FALSE,message=FALSE}
+
+df <- Table9.1
+
+df <- df %>%
+  mutate(
+    NozzleType = factor(NozzleType),
+    Speed = factor(Speed),
+    Pressure = factor(Pressure)
+)
+attach(df)
+```
+
+---
+## Dados
+
+```{r}
+datatable(df,options = list(pageLength = 5))
+```
+
+---
+## Descritiva
+
+```{r}
+str(df)
+```
+
+---
+## Descritiva: gráficos
+
+```{r, warning=F, fig.height=5}
+ggplot(df, aes(x = SyrupLoss)) + 
+  geom_histogram(binwidth = 40, fill = "skyblue", color = "black", alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Histograma de Perda de Xarope", x = "Syrup Loss", y = "Frequencia") +
+  scale_x_continuous(limits = c(-100, 150))
+```
+
+---
+## Descritiva: gráficos
+
+```{r boxplot, warning=FALSE, message=FALSE,  fig.height=5, fig.width=15}
+
+p1 <- ggplot(df, aes(NozzleType, SyrupLoss)) +
+  geom_boxplot() +
+  labs(x = "Tipo de Bico", y = "Perda de Xarope")
+p2 <- ggplot(df, aes(Speed, SyrupLoss)) +
+  geom_boxplot() +
+  labs(x = "Velocidade", y = "")
+p3 <- ggplot(df, aes(Pressure, SyrupLoss)) +
+  geom_boxplot() +
+  labs(x = "Pressão", y = "")
+grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+---
+## Descritiva: gráficos
+
+ - Suspeita de interação entre velocidade(100 e 140) e tipo do bico
+
+```{r graph interação1, warning=FALSE, message=FALSE, fig.width=10, fig.height=6, out.width="100%"}
+interaction.plot(NozzleType, Speed, SyrupLoss, col=1:4, lwd=2)
+```
+
+---
+## Descritiva: gráficos
+
+- Suspeita de interação entre pressão(10 e 20) e velocidade
+
+```{r graph interação2, warning=FALSE, message=FALSE, fig.width=10, fig.height=6, out.width="100%"}
+interaction.plot(Speed, Pressure, SyrupLoss, col=1:4, lwd=2)
+```
+
+---
+## Descritiva: gráficos
+
+ - Suspeita de interação entre pressão(10 e 20) e tipo do bico
+  
+```{r graph interação3, warning=FALSE, message=FALSE, fig.width=10, fig.height=6, out.width="100%"}
+interaction.plot(NozzleType, Pressure, SyrupLoss, col=1:4, lwd=2)
+```
+
+---
+### Modelo linear (ANOVA)
+
+Para avaliar a variabilidade nos dados, foi aplicada a análise de variância (ANOVA).
+
+Ao utilizar um delineamento fatorial, a ANOVA permite identificar não apenas os efeitos principais de cada fator, mas também suas interações. Isso é fundamental para entender como diferentes combinações de bico, velocidade e pressão afetam a pulverização, auxiliando na tomada de decisões para otimização do processo.
+
+A ANOVA aplicada neste estudo responde às seguintes perguntas principais:
+  
+  - *Os diferentes tipos de bico, velocidades e pressões impactam significativamente a perda de xarope?*
+  - *Existe interação entre esses fatores? Ou seja, o efeito de um fator depende dos níveis dos outros fatores?*
+  - *O modelo ajustado atende aos pressupostos necessários para uma análise estatística confiável?*
+
+---
+
+### Modelo linear (ANOVA)
+
+```{r}
+modelo <- lm(SyrupLoss ~ NozzleType  * Speed * Pressure,data = df)
+anov <- aov(modelo)
+summary(anov)
+```
+ 
+ - Pode-se considerar o efeito de interação e implementação do modelo multiplicativo.
+
+---
+### Modelo linear (ANOVA)
+
+```{r}
+resultados <- broom::tidy(modelo)
+
+grafico <- ggplot(resultados, aes(x = term, y = estimate, fill = p.value < 0.05)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error), width = 0.2) +
+  labs(
+    title = "Coeficientes do Modelo Linear",
+    x = "Termos do Modelo",
+    y = "Estimativa",
+    fill = "Significativo (p < 0.05)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+---
+## Modelo linear
+
+```{r, fig.width=10, fig.height=6, out.width="90%"}
+print(grafico)
+```
+
+O R² ajustado do modelo foi de 0,87, ou seja, 87% da variação do desperdicio pode ser explicada
+pelas variáveis preditoras.
+
+---
+## Pressupostos do modelo (normalidade resíduos)
+
+```{r}
+shapiro.test(modelo$residuals)
+```
+  
+Sob novel de significância de 5%, não rejeitamos a hipótese nula, portanto temos indícios para acreditar que os dados seguem uma distribuição normal.
+
+---
+## Pressupostos do modelo (homocedasticidade dos resíduos)
+
+- Teste de Bartlett com as interações:
+```{r}
+bartlett.test(SyrupLoss ~ interaction(NozzleType, Speed, Pressure), data = df)
+```
+O p-valor = 0.2658 é maior que 0.05, o que indica que não há evidências significativas de heterocedasticidade quando se considera a interação entre todos os fatores.
+
+---
+## Pressupostos do modelo (homocedasticidade dos resíduos)
+
+- Teste de Levene:
+```{r}
+leveneTest(SyrupLoss ~ NozzleType * Speed * Pressure, data = df)
+```
+
+---
+## Pressupostos do modelo (homocedasticidade dos resíduos)
+
+**Qual teste utilizar?**
+
+O teste de Levene baseia-se na dispersão das observações em relação à mediana ou à média dentro de cada grupo. Quando há apenas duas repetições por combinação de fatores, a variabilidade interna de cada grupo é subestimada, pois a variância é calculada com base em apenas duas observações. Isso pode levar a valores inflacionados da estatística F, tornando o teste excessivamente sensível a pequenas diferenças.
+O teste de Bartlett lida melhor com amostras pequena, mas exige a certeza da normalidade dos residuos. Visto que a suposição de normalidade foi aceita nesse experimento, o teste considerado é o de Bartlett.
+
+---
+## Pressupostos do modelo (independencia dos erros)
+
+ - Se o valor de Durbin-Watson for próximo de 2, isso sugere que os erros são independentes. Valores próximos de 0 ou 4 indicam problemas de autocorrelação nos resíduos.
+
+```{r}
+dwtest(modelo)
+```
+Como é próximo de 2, pode-se considerar os erros independentes.
+
+---
+## Conclusão
+
+ - Há dois pontos discrepantes no fator velocidade, nos níveis 120 e 140;
+ - Pela descritiva, o modelo realmente se deu como multiplicativo;
+ - Valores de p foram significativos para interação NozzleType vs Speed,  NozzleType vs Pressure e Speed vs Pressure;
+ - modelo conseguiu explicar 87% da variação do desperdício, um bom modelo;
+ - Rejeição da hipótese de nomralidade dos resíduos nos preditores Velocidade e Pressão;
+ - Não rejeição da hipótese nula para independência dos erros.
+ - Vantagem do planejamento experimental 3k é a quantidade de g.l. a mais sem precisar de replicação;
+ - Planejamento 3k não é o mais adequado apara avaliar superficie de resposta.
+ - O modelo é da forma:
+
+$SyrupLoss = -30.00 + 50.50 NozzleType2 + 122.50 Pressure15$
+$- 69.00 NozzleType2:Pressure20 - 60.00 Speed120:Pressure15 + 114.32$
+
+---
+## Problemas enfrentados
+
+ - Para a remoção dos pontos discrepantes é necessário haver erros no instrumento de medição;
+ - Possível influencia na rejeição de normalidade dos erros devido a esses pontos discrepantes;
+ - Dificuldade na hora de criar as superfices de resposta devido ao modo como foi construído o banco de dados.
+
