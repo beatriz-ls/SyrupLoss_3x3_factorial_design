@@ -76,6 +76,13 @@ str(df)
 ```
 
 ---
+## Descritiva
+
+```{r}
+summary(df)
+```
+
+---
 ## Descritiva: gráficos
 
 ```{r, warning=F, fig.height=5}
@@ -234,9 +241,7 @@ Como é próximo de 2, pode-se considerar os erros independentes.
  - Há dois pontos discrepantes no fator velocidade, nos níveis 120 e 140;
  - Pela descritiva, o modelo realmente se deu como multiplicativo;
  - Valores de p foram significativos para interação NozzleType vs Speed,  NozzleType vs Pressure e Speed vs Pressure;
- - modelo conseguiu explicar 87% da variação do desperdício, um bom modelo;
- - Rejeição da hipótese de nomralidade dos resíduos nos preditores Velocidade e Pressão;
- - Não rejeição da hipótese nula para independência dos erros.
+ - O modelo conseguiu explicar 87% da variação do desperdício, um bom modelo;
  - Vantagem do planejamento experimental 3k é a quantidade de g.l. a mais sem precisar de replicação;
  - Planejamento 3k não é o mais adequado apara avaliar superficie de resposta.
  - O modelo é da forma:
